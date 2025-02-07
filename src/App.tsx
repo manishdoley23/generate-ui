@@ -1,35 +1,40 @@
-import { useEffect, useState } from "react";
-// import { HTMLPreview } from "./components/helper";
-import { componentParse } from "./component-parse";
-import { DynamicComponent } from "./components/dynamic";
+import { useState } from "react";
 import { handleSubmit } from "./utils/util";
+import Components from "./components/component-registry/component-renderer";
+import { Button } from "./components/ui/button";
+
+export interface DataType {
+  _uid: string;
+  component: string;
+  headline?: string;
+  title?: string;
+  className?: string;
+  children?: string;
+}
+
+const data: DataType[] = [
+  {
+    _uid: "BUY6Drn9e1",
+    component: "foo",
+    headline: "Foo",
+  },
+  {
+    _uid: "gJZoSLkfZV",
+    component: "bar",
+    title: "Bar",
+  },
+  {
+    _uid: "X1JAfdsZxy",
+    component: "foo",
+    headline: "Another headline",
+  },
+];
 
 function App() {
   const [val, setVal] = useState("");
   const [loading, setLoading] = useState(false);
-  // const [html, setHtml] = useState("");
-  const [component, setComponent] = useState<React.ComponentType | null>(null);
-  const [streamedContent, setStreamedContent] = useState("");
-  const [tsx, setTsx] = useState("");
-
-  useEffect(() => {}, [streamedContent]);
-
-  const parseContent = (content: string) => {
-    console.log("content:", content);
-
-    try {
-      const htmlMatch = streamedContent.match(/```tsx\n([\s\S]*?)```/);
-
-      const htmlContent = htmlMatch ? htmlMatch[1] : "";
-
-      // const codeMatch = content.match(/```(jsx?|javascript)\n([\s\S]*?)```/);
-      // const codeContent = codeMatch ? codeMatch[2] : "";
-
-      setHtml(htmlContent);
-    } catch (error) {
-      console.error("Error parsing content:", error);
-    }
-  };
+  const [componentData, setComponentData] = useState<DataType[]>(data);
+  console.log("componentData:", componentData);
 
   return (
     <div className="flex flex-col min-h-screen w-screen items-center justify-center gap-5">
@@ -40,25 +45,21 @@ function App() {
           onChange={(e) => setVal(e.target.value)}
           value={val}
         />
-        <button
-          onMouseDown={() =>
+        <Button
+          children={"Submit"}
+          onClick={() =>
             handleSubmit({
               setLoading,
-              setStreamedContent,
+              setComponentData,
               val,
             })
           }
-        >
-          Submit
-        </button>
+        />
         {loading && <>Loading...</>}
 
         {/* Content Display */}
         <div className="min-h-[700px] w-[500px] bg-white border border-black rounded-3xl text-black">
-          {/* <HTMLPreview htmlContent={html} /> */}
-          {/* <DynamicComponent component={component} /> */}
-          {/* {streamedContent} */}
-          {/* {data.content.body.map((block) => block.component)} */}
+          {componentData.map((block) => Components(block))}
         </div>
       </div>
     </div>
