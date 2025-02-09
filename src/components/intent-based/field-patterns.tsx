@@ -1,135 +1,179 @@
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Textarea } from "../ui/textarea";
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   DateFieldProps,
   EditorFieldProps,
-  FieldIntent,
   FieldProps,
-  InputFieldProps,
   SelectFieldProps,
+  TextFieldProps,
 } from "./types";
 
-// Field Pattern Props Type Guards
-function isInputProps(props: FieldProps): props is InputFieldProps {
-  return (
-    !("options" in props) && !("minDate" in props) && !("maxLength" in props)
-  );
-}
+const isTextField = (props: FieldProps): props is TextFieldProps =>
+  props.type === "text" || props.type === "textarea";
 
-function isSelectProps(props: FieldProps): props is SelectFieldProps {
-  return "options" in props;
-}
+const isSelectField = (props: FieldProps): props is SelectFieldProps =>
+  props.type === "select";
 
-function isDateProps(props: FieldProps): props is DateFieldProps {
-  return "minDate" in props || "maxDate" in props;
-}
+const isEditorField = (props: FieldProps): props is EditorFieldProps =>
+  props.type === "editor";
 
-function isEditorProps(props: FieldProps): props is EditorFieldProps {
-  return "maxLength" in props;
-}
+const isDateField = (props: FieldProps): props is DateFieldProps =>
+  props.type === "date";
 
-export const fieldPatterns: Record<
-  FieldIntent,
-  (props: FieldProps) => React.ReactElement | null
-> = {
+export const fieldPatterns = {
   name_input: (props: FieldProps) => {
-    if (!isInputProps(props)) return null;
+    if (!isTextField(props)) return null;
+    const { label, required, value, onChange, className, theme } = props;
+
     return (
       <div className="space-y-2">
-        <Label>
-          {props.label} {props.required && "*"}
+        <Label
+          className={cn(
+            theme === "dark" ? "text-white" : "text-gray-700",
+            "font-medium"
+          )}
+        >
+          {label} {required && <span className="text-red-500">*</span>}
         </Label>
         <Input
-          placeholder={
-            props.placeholder || `Enter ${props.label.toLowerCase()}`
-          }
-          value={props.value}
-          onChange={(e) => props.onChange?.(e.target.value)}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className={className}
+          required={required}
         />
-        {props.error && <p className="text-sm text-red-500">{props.error}</p>}
       </div>
     );
   },
 
   description_input: (props: FieldProps) => {
-    if (!isInputProps(props)) return null;
+    if (!isTextField(props)) return null;
+    const { label, required, value, onChange, className, theme } = props;
+
     return (
       <div className="space-y-2">
-        <Label>{props.label}</Label>
+        <Label
+          className={cn(
+            theme === "dark" ? "text-white" : "text-gray-700",
+            "font-medium"
+          )}
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
         <Textarea
-          placeholder={
-            props.placeholder || `Enter ${props.label.toLowerCase()}`
-          }
-          value={props.value}
-          onChange={(e) => props.onChange?.(e.target.value)}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className={cn(className, "min-h-[100px]")}
+          required={required}
         />
-        {props.error && <p className="text-sm text-red-500">{props.error}</p>}
       </div>
     );
   },
 
   category_selection: (props: FieldProps) => {
-    if (!isSelectProps(props)) return null;
+    if (!isSelectField(props)) return null;
+    const { label, required, value, onChange, options, className, theme } =
+      props;
+
     return (
       <div className="space-y-2">
-        <Label>{props.label}</Label>
-        <Select value={props.value} onValueChange={props.onChange}>
-          <SelectTrigger>
-            <SelectValue
-              placeholder={
-                props.placeholder || `Select ${props.label.toLowerCase()}`
-              }
-            />
+        <Label
+          className={cn(
+            theme === "dark" ? "text-white" : "text-gray-700",
+            "font-medium"
+          )}
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger className={className}>
+            <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
           </SelectTrigger>
           <SelectContent>
-            {props.options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+            {options.map((option) => (
+              <SelectItem
+                key={option.value}
+                value={option.value}
+                className={cn(
+                  theme === "dark"
+                    ? "text-white hover:bg-gray-700"
+                    : "text-gray-900 hover:bg-gray-100"
+                )}
+              >
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {props.error && <p className="text-sm text-red-500">{props.error}</p>}
       </div>
     );
   },
 
   content_editor: (props: FieldProps) => {
-    if (!isEditorProps(props)) return null;
+    if (!isEditorField(props)) return null;
+    const {
+      label,
+      required,
+      // value,
+      // onChange,
+      className,
+      theme,
+    } = props;
+
     return (
       <div className="space-y-2">
-        <Label>{props.label}</Label>
-        <div className="min-h-[200px] rounded-md border">
-          {/* <Editor
-          editorSerializedState={props.value || defaultEditorState}
-          onSerializedChange={props.onChange}
-        /> */}
+        <Label
+          className={cn(
+            theme === "dark" ? "text-white" : "text-gray-700",
+            "font-medium"
+          )}
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <div
+          className={cn(
+            "min-h-[200px] rounded-md border",
+            className,
+            theme === "dark" ? "bg-gray-800" : "bg-white"
+          )}
+        >
+          {/* Editor component implementation */}
         </div>
-        {props.error && <p className="text-sm text-red-500">{props.error}</p>}
       </div>
     );
   },
 
   date_picker: (props: FieldProps) => {
-    if (!isDateProps(props)) return null;
+    if (!isDateField(props)) return null;
+    const { label, required, className, theme } = props;
+
     return (
       <div className="space-y-2">
-        <Label>{props.label}</Label>
-        {/* <Calendar
-        selected={props.value ? new Date(props.value) : undefined}
-        onSelect={(date) => props.onChange?.(date?.toISOString() || "")}
-        minDate={props.minDate}
-        maxDate={props.maxDate}
-      /> */}
-        {props.error && <p className="text-sm text-red-500">{props.error}</p>}
+        <Label
+          className={cn(
+            theme === "dark" ? "text-white" : "text-gray-700",
+            "font-medium"
+          )}
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <div
+          className={cn(
+            "rounded-md border",
+            className,
+            theme === "dark" ? "bg-gray-800" : "bg-white"
+          )}
+        >
+          {/* Calendar component implementation */}
+        </div>
       </div>
     );
   },

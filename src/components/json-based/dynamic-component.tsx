@@ -1,69 +1,138 @@
-import React, { useState } from "react";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Button } from "./ui/button";
+import React, { useCallback, useState } from "react";
+import { cn } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
-import { Textarea } from "./ui/textarea";
+} from "../ui/select";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
-import { Card, CardHeader, CardTitle } from "./ui/card";
-import { cn } from "../utils/util";
+} from "../ui/dialog";
+import { DynamicLayout } from "./dynamic-layout";
+import { ComponentData, ValidationRule } from "./types";
+import { Textarea } from "../ui/textarea";
 
-// Define possible component types
-type ComponentType =
-  | "form"
-  | "input"
-  | "select"
-  | "textarea"
-  | "button"
-  | "dialog"
-  | "card";
-
-interface SelectOption {
-  label: string;
-  value: string;
+interface ValidationState {
+  isValid: boolean;
+  errors: string[];
 }
 
-export interface ComponentData {
-  componentType: ComponentType;
-  id?: string;
-  label?: string;
-  placeholder?: string;
-  className?: string;
-  required?: boolean;
-  disabled?: boolean;
-  options?: SelectOption[];
-  children?: ComponentData[];
-}
+const validateField = async (
+  value: any,
+  rules?: ValidationRule[]
+): Promise<ValidationState> => {
+  if (!rules?.length) return { isValid: true, errors: [] };
+
+  const errors: string[] = [];
+
+  for (const rule of rules) {
+    let isValid = true;
+
+    switch (rule.type) {
+      case "required":
+        isValid = value !== undefined && value !== "" && value !== null;
+        break;
+      case "pattern":
+        isValid = new RegExp(rule.value).test(value);
+        break;
+      case "minLength":
+        isValid = value.length >= rule.value;
+        break;
+      case "maxLength":
+        isValid = value.length <= rule.value;
+        break;
+      case "custom":
+        if (rule.validate) {
+          isValid = await Promise.resolve(rule.validate(value));
+        }
+        break;
+    }
+
+    if (!isValid) {
+      errors.push(rule.message);
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+};
 
 interface DynamicComponentProps {
   data: ComponentData;
-  onChange?: (id: string, value: string) => void;
+  onChange?: (id: string, value: any, isValid?: boolean) => void;
 }
 
-const DynamicComponent: React.FC<DynamicComponentProps> = ({
+export const DynamicComponent: React.FC<DynamicComponentProps> = ({
   data,
   onChange,
 }) => {
-  // Debug render
-  console.log("Rendering component:", data.componentType, data);
+  const [validation, setValidation] = useState<ValidationState>({
+    isValid: true,
+    errors: [],
+  });
+
+  const handleChange = useCallback(
+    async (value: any) => {
+      if (!data.id) return;
+
+      const validationResult = await validateField(value, data.validation);
+      setValidation(validationResult);
+      onChange?.(data.id, value, validationResult.isValid);
+    },
+    [data.id, data.validation, onChange]
+  );
 
   const renderField = () => {
+    // If component has layout configuration, wrap children in DynamicLayout
+    if (data.layout && data.children) {
+      return (
+        <DynamicLayout
+          config={data.layout}
+          className={cn(
+            data.className,
+            data.theme?.customStyles &&
+              Object.entries(data.theme.customStyles)
+                .map(([key, value]) => `${key}:${value}`)
+                .join(";")
+          )}
+        >
+          {data.children.map((child, index) => (
+            <DynamicComponent
+              key={child.id || index}
+              data={child}
+              onChange={onChange}
+            />
+          ))}
+        </DynamicLayout>
+      );
+    }
+
+    // Existing component rendering logic...
     switch (data.componentType) {
       case "form":
         return (
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className={cn("space-y-4", data.className)}
+            onSubmit={(e) => e.preventDefault()}
+          >
             {data.children?.map((child, index) => (
               <DynamicComponent
                 key={child.id || index}
@@ -78,15 +147,20 @@ const DynamicComponent: React.FC<DynamicComponentProps> = ({
         return (
           <Card className={cn(data.className)}>
             <CardHeader>
-              {data.label && <CardTitle>{data.label} asdaa sd</CardTitle>}
+              {data.label && <CardTitle>{data.label}</CardTitle>}
+              {data.description && (
+                <CardDescription>{data.description}</CardDescription>
+              )}
             </CardHeader>
-            {data.children?.map((child, index) => (
-              <DynamicComponent
-                key={child.id || index}
-                data={child}
-                onChange={onChange}
-              />
-            ))}
+            <CardContent>
+              {data.children?.map((child, index) => (
+                <DynamicComponent
+                  key={child.id || index}
+                  data={child}
+                  onChange={onChange}
+                />
+              ))}
+            </CardContent>
           </Card>
         );
 
@@ -136,7 +210,7 @@ const DynamicComponent: React.FC<DynamicComponentProps> = ({
         );
 
       case "button":
-        return <Button className={data.className}>{data.label}</Button>;
+        return <Button className={cn(data.className)}>{data.label}</Button>;
 
       case "dialog":
         return (
@@ -159,12 +233,32 @@ const DynamicComponent: React.FC<DynamicComponentProps> = ({
           </Dialog>
         );
 
+      case "custom":
+        if (!data.customProps?.component) return null;
+        const CustomComponent = data.customProps.component;
+        return (
+          <CustomComponent {...data.customProps} onChange={handleChange} />
+        );
+
       default:
         return null;
     }
   };
 
-  return renderField();
+  return (
+    <div className="dynamic-component">
+      {renderField()}
+      {validation.errors.length > 0 && (
+        <div className="validation-errors mt-1">
+          {validation.errors.map((error, index) => (
+            <p key={index} className="text-red-500 text-sm">
+              {error}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 // Example usage component
@@ -182,7 +276,9 @@ export default function TemplateForm() {
   const formData: ComponentData = {
     componentType: "card",
     label: "Create a Car Template",
-    className: "bg-red-400",
+    description: "Get the best cars",
+    className:
+      "w-[500px] bg-gradient-to-r from-indigo-300 to-pink-300 text-gray-900 rounded-lg shadow-lg",
     children: [
       {
         componentType: "form",

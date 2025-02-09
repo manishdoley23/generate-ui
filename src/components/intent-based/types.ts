@@ -1,26 +1,4 @@
-import { SerializedEditorState } from "lexical";
-
-export interface ContextData {
-  [key: string]: {
-    value?: string | SerializedEditorState;
-    onChange?: (value: string | SerializedEditorState) => void;
-    options?: Array<{ label: string; value: string }>;
-    placeholder?: string;
-    minDate?: Date;
-    maxDate?: Date;
-    maxLength?: number;
-  };
-}
-
-// IntentComponent props
-export interface IntentComponentProps {
-  intent: UserIntent;
-  context: ContextData;
-  onSubmit?: (data: ContextData) => void;
-}
-
-// Define UserIntent type
-export type UserIntent = "create_template" | "edit_template" | "view_template";
+import { SerializedEditorState, SerializedLexicalNode } from "lexical";
 
 // Base field props interface
 interface BaseFieldProps {
@@ -44,6 +22,28 @@ export interface InputFieldProps extends ValueFieldProps<string> {
 export interface SelectFieldProps extends ValueFieldProps<string> {
   options: Array<{ label: string; value: string }>;
 }
+
+export interface ContextData {
+  [key: string]: {
+    value?: string | SerializedEditorState;
+    onChange?: (value: string | SerializedEditorState) => void;
+    options?: Array<{ label: string; value: string }>;
+    placeholder?: string;
+    minDate?: Date;
+    maxDate?: Date;
+    maxLength?: number;
+  };
+}
+
+// IntentComponent props
+export interface IntentComponentProps {
+  intent: UserIntent;
+  context: ContextData;
+  onSubmit?: (data: ContextData) => void;
+}
+
+// Define UserIntent type
+export type UserIntent = "create_template" | "edit_template" | "view_template";
 
 export interface DateFieldProps extends ValueFieldProps<string> {
   minDate?: Date;
@@ -73,8 +73,42 @@ export type FieldIntent =
   | "content_editor"
   | "date_picker";
 
+interface BaseFieldProps {
+  label: string;
+  required?: boolean;
+  className?: string;
+  theme?: string;
+}
+
+// Props for different field types
+export interface TextFieldProps extends BaseFieldProps {
+  type: "text" | "textarea";
+  value?: string;
+  onChange?: (value: string) => void;
+}
+
+export interface SelectFieldProps extends BaseFieldProps {
+  type: "select";
+  value?: string;
+  onChange?: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+}
+
+export interface EditorFieldProps extends BaseFieldProps {
+  type: "editor";
+  value?: SerializedEditorState<SerializedLexicalNode>;
+  onChange?: (value: SerializedEditorState<SerializedLexicalNode>) => void;
+}
+
+export interface DateFieldProps extends BaseFieldProps {
+  type: "date";
+  value?: string;
+  onChange?: (value: string) => void;
+}
+
+// Union type for all field props
 export type FieldProps =
-  | InputFieldProps
+  | TextFieldProps
   | SelectFieldProps
-  | DateFieldProps
-  | EditorFieldProps;
+  | EditorFieldProps
+  | DateFieldProps;
